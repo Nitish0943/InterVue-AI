@@ -3,7 +3,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { useTheme } from "next-themes";
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Sun, Moon, LogOut } from "lucide-react";
 
@@ -11,6 +11,9 @@ const Navbar = () => {
   const { theme, setTheme, resolvedTheme } = useTheme();
   const router = useRouter();
   const [loading, setLoading] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => setMounted(true), []);
 
   const handleToggleTheme = () => {
     setTheme(resolvedTheme === "dark" ? "light" : "dark");
@@ -41,7 +44,11 @@ const Navbar = () => {
           aria-label="Toggle theme"
           onClick={handleToggleTheme}
         >
-          {resolvedTheme === "dark" ? <Sun className="size-5" /> : <Moon className="size-5" />}
+          {(mounted ? resolvedTheme === "dark" : false) ? (
+            <Sun className="size-5" />
+          ) : (
+            <Moon className="size-5" />
+          )}
         </Button>
         <Button
           variant="outline"

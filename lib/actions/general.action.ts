@@ -9,6 +9,14 @@ import { feedbackSchema } from "@/constants";
 export async function createFeedback(params: CreateFeedbackParams) {
   const { interviewId, userId, transcript, feedbackId } = params;
 
+  if (!interviewId || !userId) {
+    return { success: false, error: "Missing interviewId or userId" };
+  }
+
+  if (!transcript || transcript.length === 0) {
+    return { success: false, error: "No transcript captured during the interview" };
+  }
+
   try {
     const formattedTranscript = transcript
       .map(
@@ -18,7 +26,7 @@ export async function createFeedback(params: CreateFeedbackParams) {
       .join("");
 
     const { object } = await generateObject({
-      model: google("gemini-2.0-flash-001", {
+      model: google("gemini-3.8-flash", {
         structuredOutputs: false,
       }),
       schema: feedbackSchema,
@@ -60,9 +68,12 @@ export async function createFeedback(params: CreateFeedbackParams) {
     await feedbackRef.set(feedback);
 
     return { success: true, feedbackId: feedbackRef.id };
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error saving feedback:", error);
-    return { success: false };
+    return {
+      success: false,
+      error: error?.message || "Failed to generate feedback",
+    };
   }
 }
 

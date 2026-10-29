@@ -137,24 +137,38 @@ const Agent = ({
 
     const handleGenerateFeedback = async () => {
       try {
+        console.log("🔄 Generating feedback...", {
+          interviewId,
+          userId,
+          messageCount: messages.length,
+        });
+
         // Check if we have a valid interview ID
-        if (!interviewId) {
-          console.log("⚠️ No interview ID found, using demo interview for feedback");
+        if (!interviewId || !userId) {
+          console.log("⚠️ Missing interviewId or userId, using demo fallback");
           await handleFallbackToDemoInterview();
           return;
         }
 
-        const { success, feedbackId: id } = await createFeedback({
+        if (messages.length === 0) {
+          alert("No transcript was captured during the interview. Please try again.");
+          router.push("/");
+          return;
+        }
+
+        const { success, feedbackId: id, error: fbError } = await createFeedback({
           interviewId: interviewId,
           userId: userId!,
           transcript: messages,
           feedbackId,
         });
 
+        console.log("📝 Feedback result:", { success, feedbackId: id, error: fbError });
+
         if (success && id) {
           router.push(`/interview/${interviewId}/feedback`);
         } else {
-          console.error("Error saving feedback, trying demo fallback");
+          console.error("Error saving feedback, trying demo fallback", fbError);
           // If feedback generation fails, try demo fallback
           await handleFallbackToDemoInterview();
         }
@@ -334,7 +348,7 @@ const Agent = ({
             console.log("✅ Demo interview saved successfully");
             
             // Generate feedback using the demo interview
-            const { success, feedbackId: id } = await createFeedback({
+            const { success, feedbackId: id, error: fbError } = await createFeedback({
               interviewId: saveData.interviewId,
               userId: userId!,
               transcript: messages,
@@ -346,8 +360,8 @@ const Agent = ({
               alert(`Interview generation failed, but we've created a ${roleText} demo interview for you to practice with! Redirecting to feedback...`);
               router.push(`/interview/${saveData.interviewId}/feedback`);
             } else {
-              console.error("Error generating feedback for demo interview");
-              alert("We couldn't generate feedback. Please try again later.");
+              console.error("Error generating feedback for demo interview", fbError);
+              alert(`We couldn't generate feedback: ${fbError || "Please try again later."}`);
               router.push("/");
             }
           } else {
@@ -363,13 +377,16 @@ const Agent = ({
       }
     };
 
-    if (callStatus === CallStatus.FINISHED) {
-      if (type === "generate") {
-        handleGenerateInterview();
-      } else {
-      handleGenerateFeedback();
+    // Run feedback generation when call ends — await it so errors are handled
+    (async () => {
+      if (callStatus === CallStatus.FINISHED) {
+        if (type === "generate") {
+          await handleGenerateInterview();
+        } else {
+          await handleGenerateFeedback();
+        }
       }
-    }
+    })();
   }, [messages, callStatus, feedbackId, interviewId, router, type, userId]);
 
   const handleCall = async () => {
@@ -496,13 +513,15 @@ const Agent = ({
           <h3>AI Interviewer</h3>
         </div>
 
-        {/* User Profile Card with Live Webcam Stream */}
-        <div className="card-border">
-          <div className="card-content">
-            <WebCamStream /> {/* ✅ Live Video Feed Instead of Static Image */}
-            <h3>{userName}</h3>
+        {/* User Profile Card with Live Webcam Stream (only during active call) */}
+        {callStatus === CallStatus.ACTIVE && (
+          <div className="card-border">
+            <div className="card-content">
+              <WebCamStream /> {/* ✅ Live Video Feed Only During Active Call */}
+              <h3>{userName}</h3>
+            </div>
           </div>
-        </div>
+        )}
       </div>
 
       {messages.length > 0 && (

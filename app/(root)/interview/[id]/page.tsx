@@ -14,15 +14,24 @@ import DisplayTechIcons from "@/components/DisplayTechIcons";
 const InterviewDetails = async ({ params }: RouteParams) => {
   const { id } = await params;
 
-  const user = await getCurrentUser();
+  const [user, interview, feedback] = await Promise.all([
+    getCurrentUser(),
+    getInterviewById(id),
+    getFeedbackByInterviewId({
+      interviewId: id,
+      userId: "", // filled below once user is known
+    }),
+  ]);
 
-  const interview = await getInterviewById(id);
   if (!interview) redirect(`/interview/${id}/demo`);
 
-  const feedback = await getFeedbackByInterviewId({
-    interviewId: id,
-    userId: user?.id!,
-  });
+  // Re-fetch feedback with the resolved userId if we have a user
+  const resolvedFeedback = user
+    ? await getFeedbackByInterviewId({
+        interviewId: id,
+        userId: user.id,
+      })
+    : feedback;
 
   return (
     <>
@@ -53,7 +62,7 @@ const InterviewDetails = async ({ params }: RouteParams) => {
         interviewId={id}
         type="interview"
         questions={interview.questions}
-        feedbackId={feedback?.id}
+        feedbackId={resolvedFeedback?.id}
       />
     </>
   );
