@@ -3,7 +3,7 @@ import Image from "next/image";
 
 import { Button } from "@/components/ui/button";
 import InterviewCard from "@/components/InterviewCard";
-import { dummyInterviews }  from "@/constants/index";
+import { dummyInterviews } from "@/constants/index";
 import { getCurrentUser } from "@/lib/actions/auth.action";
 import {
   getInterviewsByUserId,
@@ -12,10 +12,11 @@ import {
 
 async function Home() {
   const user = await getCurrentUser();
+  const userId = user?.id;
 
   const [userInterviews, allInterview] = await Promise.all([
-    getInterviewsByUserId(user?.id!),
-    getLatestInterviews({ userId: user?.id! }),
+    userId ? getInterviewsByUserId(userId) : Promise.resolve(null),
+    userId ? getLatestInterviews({ userId: userId }) : Promise.resolve(null),
   ]);
 
   const hasPastInterviews = userInterviews?.length! > 0;
